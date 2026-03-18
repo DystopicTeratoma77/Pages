@@ -202,21 +202,29 @@
             submitButton.disabled = true;
 
             const formData = new FormData(form);
+            const urlEncodedData = new URLSearchParams(formData).toString();
 
             // Reemplazar la URL ABAJO con la que te dé Google Apps Script (Debe terminar en /exec y tener /macros/s/...)
-            const urlScript = "https://script.google.com/u/0/home/projects/1dBME3uyUUMjdCcFI5zwHF2CG28WHFfd0lDmPJvvGfdzhaoo6fK2rYrAr/exec";
+            const urlScript = "https://script.google.com/macros/s/AKfycbxnvY_lipchOLk0ptPm_gb0Ajfr4VINZpe9X15tgqIVnHUsBLxJpjDoItFOrGEFihM/exec";
 
             fetch(urlScript, {
                 method: "POST",
-                body: formData
+                body: urlEncodedData,
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded"
+                }
             })
-                .then(response => {
+                .then(response => response.text())
+                .then(text => {
                     spinner.style.display = 'none';
                     submitButton.disabled = false;
 
-                    // Si quieres ser estricto con response.ok puedes validarlo
-                    form.classList.add("hidden");
-                    document.getElementById("mensaje-confirmacion").classList.remove("hidden");
+                    if (text.includes("Error")) {
+                        alert("Ocurrió un error en el servidor: " + text);
+                    } else {
+                        form.classList.add("hidden");
+                        document.getElementById("mensaje-confirmacion").classList.remove("hidden");
+                    }
                 })
                 .catch(error => {
                     spinner.style.display = 'none';
