@@ -101,8 +101,13 @@
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         button:disabled {
@@ -138,10 +143,8 @@
                 <label for="bonus_type">Tipo de Bono:</label>
                 <select id="bonus_type" name="bonus_type" required>
                     <option value="" disabled selected>Seleccione una opción...</option>
-                    <option value="Bono de Productividad">Bono de Productividad</option>
-                    <option value="Bono de Puntualidad">Bono de Puntualidad</option>
-                    <option value="Bono de Ventas">Bono de Ventas</option>
-                    <option value="Bono Extraordinario">Bono Extraordinario</option>
+                    <option value="Nota de Crédito">Bono de Productividad</option>
+                    <option value="Partes Gratis">Bono de Puntualidad</option>
                 </select>
             </div>
 
@@ -163,7 +166,7 @@
         // 1. Inyectar 'user' (email) y 'cve' desde los parámetros de la URL
         // Ejemplo de URL esperada: Formulario_Bono.html?email=miguel@simdatagroup.com&cve=12345
         // o si usas 'user' en la URL en vez de 'email': Formulario_Bono.html?user=miguel@simdatagroup.com&cve=12345
-        
+
         const emailParam = getQueryParam("email") || getQueryParam("user");
         if (emailParam) {
             document.getElementById("user").value = decodeURIComponent(emailParam);
@@ -192,7 +195,7 @@
             const formData = new FormData(form);
 
             // Reemplazar la URL ABAJO con la que te dé Google Apps Script (Debe terminar en /exec y tener /macros/s/...)
-            const urlScript = "TU_URL_DE_GOOGLE_APPS_SCRIPT_AQUI"; 
+            const urlScript = "https://script.google.com/u/0/home/projects/1dBME3uyUUMjdCcFI5zwHF2CG28WHFfd0lDmPJvvGfdzhaoo6fK2rYrAr/exec";
 
             fetch(urlScript, {
                 method: "POST",
