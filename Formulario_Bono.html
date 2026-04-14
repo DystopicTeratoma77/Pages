@@ -264,8 +264,8 @@
     <!-- Modal de Confirmación -->
     <div class="modal-overlay" id="modal-confirmacion">
         <div class="modal-box">
-            <h3>Confirmar Envío</h3>
-            <p>¿Estás seguro de tu respuesta?</p>
+            <h3 id="modal-title">Confirmar Envío</h3>
+            <p id="modal-message">¿Estás seguro de tu respuesta?</p>
             <div class="modal-buttons">
                 <button type="button" class="modal-btn btn-cancel" id="btn-cancelar">Cancelar</button>
                 <button type="button" class="modal-btn btn-confirm" id="btn-confirmar">Confirmar</button>
@@ -305,10 +305,21 @@
         const btnCancelar = document.getElementById('btn-cancelar');
         const btnConfirmar = document.getElementById('btn-confirmar');
 
+        // Modal reusable
+        function mostrarModal(titulo, mensaje, mostrarConfirmacion = false) {
+            document.getElementById("modal-title").innerText = titulo;
+            document.getElementById("modal-message").innerText = mensaje;
+
+            // Mostrar/ocultar botones
+            btnConfirmar.style.display = mostrarConfirmacion ? "inline-block" : "none";
+            btnCancelar.innerText = mostrarConfirmacion ? "Cancelar" : "Cerrar";
+
+            modal.classList.add("active");
+        }
+
         form.addEventListener('submit', function (e) {
             e.preventDefault();
-            // Mostrar modal en lugar de confirm()
-            modal.classList.add('active');
+            mostrarModal("Confirmar envío", "¿Estás seguro de tu respuesta?", true);
         });
 
         btnCancelar.addEventListener('click', function () {
@@ -343,7 +354,7 @@
                     submitButton.disabled = false;
 
                     if (text.startsWith("ERROR")) {
-                        alert("Ocurrió un error en el servidor: " + text);
+                        mostrarModal("Error", text, false);
                     } else {
                         form.classList.add("hidden");
                         document.getElementById("mensaje-confirmacion").classList.remove("hidden");
