@@ -354,7 +354,8 @@
                     submitButton.disabled = false;
 
                     if (text.startsWith("ERROR")) {
-                        mostrarModal("Error", text, false);
+                        const mensajeLimpio = text.replace(/^ERROR:\s*/i, "");
+                        mostrarModal("Error", mensajeLimpio, false);
                     } else {
                         form.classList.add("hidden");
                         document.getElementById("mensaje-confirmacion").classList.remove("hidden");
