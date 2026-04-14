@@ -342,7 +342,7 @@
                     spinner.style.display = 'none';
                     submitButton.disabled = false;
 
-                    if (text.includes("Error")) {
+                    if (text.startsWith("ERROR")) {
                         alert("Ocurrió un error en el servidor: " + text);
                     } else {
                         form.classList.add("hidden");
