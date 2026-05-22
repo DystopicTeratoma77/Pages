@@ -273,6 +273,16 @@
         <div class="header-banner">
             <h2>FORMULARIO DE BENEFICIOS</h2>
         </div>
+        <div class="info-row" id="info-row-error">
+            <div class="info-banner" id="mes-banner-error">
+                Respuesta del mes:<br>
+                <strong id="mes-display-error">—</strong>
+            </div>
+            <div class="info-banner" id="cve-banner-error">
+                Clave de distribuidor:<br>
+                <strong id="cve-display-error">—</strong>
+            </div>
+        </div>
         <p class="mensaje-error-acceso">No cuenta con incentivo ganado en este mes</p>
     </div>
 
@@ -487,6 +497,18 @@
                 contenedorFormulario.classList.add("hidden");
                 contenedorError.classList.remove("hidden");
                 modal.classList.add("hidden");
+
+                // Poblar mes y cve en el contenedor de error
+                const mesNormalizado = sincronizarMesInyectado();
+                const mesDisplayError = document.getElementById("mes-display-error");
+                if (mesDisplayError) mesDisplayError.textContent = formatearMesParaMostrar(mesNormalizado);
+
+                const cveParam = getQueryParam("cve");
+                const cveDisplayError = document.getElementById("cve-display-error");
+                if (cveParam && cveDisplayError) {
+                    cveDisplayError.textContent = decodeURIComponent(cveParam);
+                }
+
                 return;
             }
 
