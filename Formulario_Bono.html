@@ -338,14 +338,52 @@
 
     <script>
         function getQueryParam(param) {
+            const buscar = param.toLowerCase();
             const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get(param);
+
+            for (const [clave, valor] of urlParams.entries()) {
+                if (clave.toLowerCase() === buscar) {
+                    return valor;
+                }
+            }
+
+            // Respaldo: parámetros en el hash (#mes=Apr%202025&...)
+            if (window.location.hash && window.location.hash.indexOf("=") !== -1) {
+                const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+                for (const [clave, valor] of hashParams.entries()) {
+                    if (clave.toLowerCase() === buscar) {
+                        return valor;
+                    }
+                }
+            }
+
+            return null;
         }
+
+        const MESES_EN_US = [
+            "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+            "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+        ];
 
         const NOMBRES_MES = [
             "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
             "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
         ];
+
+        const ALIAS_MES = {
+            ene: 0, enero: 0, jan: 0, january: 0,
+            feb: 1, febrero: 1, february: 1,
+            mar: 2, marzo: 2, march: 2,
+            abr: 3, abril: 3, apr: 3, april: 3,
+            may: 4, mayo: 4,
+            jun: 5, junio: 5, june: 5,
+            jul: 6, julio: 6, july: 6,
+            ago: 7, agosto: 7, aug: 7, august: 7,
+            sep: 8, sept: 8, set: 8, septiembre: 8, september: 8,
+            oct: 9, octubre: 9, october: 9,
+            nov: 10, noviembre: 10, november: 10,
+            dic: 11, dec: 11, diciembre: 11, december: 11
+        };
 
         function formatearFechaHoraCDMX() {
             const partes = new Intl.DateTimeFormat("en-US", {
@@ -359,49 +397,108 @@
                 hour12: true
             }).formatToParts(new Date());
 
-            const get = (tipo) => partes.find(p => p.type === tipo)?.value ?? "";
-            return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}:${get("second")} ${get("dayPeriod")}`;
+            function get(tipo) {
+                for (let i = 0; i < partes.length; i++) {
+                    if (partes[i].type === tipo) return partes[i].value;
+                }
+                return "";
+            }
+
+            return get("year") + "-" + get("month") + "-" + get("day") + " " +
+                get("hour") + ":" + get("minute") + ":" + get("second") + " " + get("dayPeriod");
         }
 
-        function formatearMesParaMostrar(mesRaw) {
-            if (!mesRaw) return "—";
-            const mes = decodeURIComponent(mesRaw).trim();
-            const match = mes.match(/^(\d{4})-(\d{2})$/);
-            if (match) {
-                const indice = parseInt(match[2], 10) - 1;
-                if (indice >= 0 && indice < 12) {
-                    return NOMBRES_MES[indice] + " " + match[1];
+        function indiceMesDesdeTexto(textoMes) {
+            const clave = String(textoMes || "").toLowerCase();
+            return Object.prototype.hasOwnProperty.call(ALIAS_MES, clave) ? ALIAS_MES[clave] : -1;
+        }
+
+        /** Normaliza el parámetro mes de la URL a "MMM YYYY" (en-US), ej. "Apr 2025". */
+        function normalizarMesInyectado(mesRaw) {
+            if (!mesRaw) return null;
+
+            const mes = decodeURIComponent(String(mesRaw)).trim().replace(/\s+/g, " ");
+            const matchTexto = mes.match(/^([A-Za-z]+)\s+(\d{4})$/);
+            if (matchTexto) {
+                const indice = indiceMesDesdeTexto(matchTexto[1]);
+                if (indice !== -1) {
+                    return MESES_EN_US[indice] + " " + matchTexto[2];
                 }
             }
-            return mes;
-        }
 
-        const mesParam = getQueryParam("mes");
-        const bonusParam = getQueryParam("bonus");
-        const tieneDerechoIncentivo = bonusParam !== "0";
-
-        const contenedorFormulario = document.getElementById("contenedor-formulario");
-        const contenedorError = document.getElementById("contenedor-error");
-        const modal = document.getElementById("modal-confirmacion");
-
-        if (!tieneDerechoIncentivo) {
-            contenedorFormulario.classList.add("hidden");
-            contenedorError.classList.remove("hidden");
-            modal.classList.add("hidden");
-        } else {
-            contenedorError.classList.add("hidden");
-
-            if (mesParam) {
-                const mesDecodificado = decodeURIComponent(mesParam).trim();
-                document.getElementById("mes").value = mesDecodificado;
-                document.getElementById("mes-display").textContent = formatearMesParaMostrar(mesDecodificado);
+            const matchIso = mes.match(/^(\d{4})-(\d{2})$/);
+            if (matchIso) {
+                const indice = parseInt(matchIso[2], 10) - 1;
+                if (indice >= 0 && indice < 12) {
+                    return MESES_EN_US[indice] + " " + matchIso[1];
+                }
             }
 
-            // Inyectar 'user' (email) y 'cve' desde los parámetros de la URL
-            // Ejemplo: Formulario_Bono.html?email=...&cve=...&mes=2025-04&bonus=1
+            const fecha = new Date(mes);
+            if (!isNaN(fecha.getTime())) {
+                const abrev = fecha.toLocaleString("en-US", { month: "short", timeZone: "UTC" });
+                const anio = fecha.getUTCFullYear();
+                const indice = MESES_EN_US.indexOf(abrev);
+                if (indice !== -1) return MESES_EN_US[indice] + " " + anio;
+            }
+
+            return null;
+        }
+
+        /** Muestra el mes en español; el valor enviado al servidor sigue en MMM YYYY en-US. */
+        function formatearMesParaMostrar(mesNormalizado) {
+            if (!mesNormalizado) return "—";
+
+            const match = mesNormalizado.match(/^([A-Za-z]{3})\s+(\d{4})$/);
+            if (!match) return mesNormalizado;
+
+            const indice = MESES_EN_US.findIndex(function (m) {
+                return m.toLowerCase() === match[1].toLowerCase();
+            });
+            if (indice === -1) return mesNormalizado;
+
+            return NOMBRES_MES[indice] + " " + match[2];
+        }
+
+        function obtenerMesDesdeUrl() {
+            return normalizarMesInyectado(getQueryParam("mes"));
+        }
+
+        function sincronizarMesInyectado() {
+            const mesNormalizado = obtenerMesDesdeUrl();
+            const mesDisplay = document.getElementById("mes-display");
+            const mesInput = document.getElementById("mes");
+
+            if (mesInput) mesInput.value = mesNormalizado || "";
+            if (mesDisplay) mesDisplay.textContent = formatearMesParaMostrar(mesNormalizado);
+
+            return mesNormalizado;
+        }
+
+        function inicializarFormulario() {
+            const bonusParam = getQueryParam("bonus");
+            const tieneDerechoIncentivo = bonusParam !== "0";
+
+            const contenedorFormulario = document.getElementById("contenedor-formulario");
+            const contenedorError = document.getElementById("contenedor-error");
+            const modal = document.getElementById("modal-confirmacion");
+
+            if (!tieneDerechoIncentivo) {
+                contenedorFormulario.classList.add("hidden");
+                contenedorError.classList.remove("hidden");
+                modal.classList.add("hidden");
+                return;
+            }
+
+            contenedorError.classList.add("hidden");
+            contenedorFormulario.classList.remove("hidden");
+
+            // Siempre poblar campos que no dependen del mes
             const emailParam = getQueryParam("email") || getQueryParam("user");
             if (emailParam) {
                 document.getElementById("user").value = decodeURIComponent(emailParam);
+            } else {
+                document.getElementById("user").value = "";
             }
 
             const cveParam = getQueryParam("cve");
@@ -412,6 +509,12 @@
             }
 
             document.getElementById("date").value = formatearFechaHoraCDMX();
+
+            const mesNormalizado = sincronizarMesInyectado();
+            if (!mesNormalizado) {
+                document.getElementById("mes-display").textContent = "—";
+                document.getElementById("mes").value = "";
+            }
 
             const form = document.getElementById("bono-form");
             const spinner = document.getElementById("spinner");
@@ -429,6 +532,10 @@
 
             form.addEventListener("submit", function (e) {
                 e.preventDefault();
+                if (!sincronizarMesInyectado()) {
+                    mostrarModal("Error", "Mes de incentivo no válido. Se espera formato MMM YYYY (ej. Apr 2025).", false);
+                    return;
+                }
                 mostrarModal("Confirmar envío", "¿Estás seguro de tu respuesta?", true);
             });
 
@@ -442,20 +549,28 @@
             });
 
             function enviarFormulario() {
+                if (!sincronizarMesInyectado()) {
+                    mostrarModal("Error", "Mes de incentivo no válido. Se espera formato MMM YYYY (ej. Apr 2025).", false);
+                    return;
+                }
+
                 spinner.style.display = "block";
                 submitButton.disabled = true;
+
+                sincronizarMesInyectado();
 
                 const formData = new FormData(form);
                 const urlEncodedData = new URLSearchParams(formData).toString();
 
-                const urlScript = "https://script.google.com/macros/s/AKfycbx6K1tnW1dWguowIEb82ja5_mvavBhFX0BG9qqrnoo2CDBS0M1C-A0cAOfKXWnftV3X/exec";
+                // URL de tu implementación Web App (termina en /exec)
+                const urlScript = "https://script.google.com/macros/s/AKfycbwMjg9PhMRQUECCaQCZbFDX7ZBhF9B-KypS-_E_QwZaLaw6QmwCzh73tpKGeWTiGrNq/exec";
 
-                fetch(urlScript, {
-                    method: "POST",
-                    body: urlEncodedData,
-                    headers: {
-                        "Content-Type": "application/x-www-form-urlencoded"
-                    }
+                // GET evita que el redirect 302 de Google pierda el body del POST (problema al probar HTML en local)
+                const urlConDatos = urlScript + (urlScript.indexOf("?") === -1 ? "?" : "&") + urlEncodedData;
+
+                fetch(urlConDatos, {
+                    method: "GET",
+                    redirect: "follow"
                 })
                     .then(response => response.text())
                     .then(text => {
@@ -478,6 +593,12 @@
                         alert("No se pudo conectar con el servidor: " + error);
                     });
             }
+        }
+
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", inicializarFormulario);
+        } else {
+            inicializarFormulario();
         }
     </script>
 </body>
