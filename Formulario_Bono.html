@@ -305,6 +305,7 @@
         <form id="bono-form">
             <input type="hidden" id="mes" name="mes" />
             <input type="hidden" id="cve" name="cve" />
+            <input type="hidden" id="staff" name="staff" />
             <div class="form-section">
                 <label for="date">Fecha:</label>
                 <!-- Usamos 'date' (inglés) para coincidir con la columna en Sheets que pediste -->
@@ -530,6 +531,11 @@
                 document.getElementById("cve-display").textContent = cveDecodificada;
             }
 
+            const staffParam = getQueryParam("staff");
+            if (staffParam) {
+                document.getElementById("staff").value = decodeURIComponent(staffParam);
+            }
+
             document.getElementById("date").value = formatearFechaHoraCDMX();
 
             const mesNormalizado = sincronizarMesInyectado();
@@ -585,7 +591,7 @@
                 const urlEncodedData = new URLSearchParams(formData).toString();
 
                 // URL de tu implementación Web App (termina en /exec)
-                const urlScript = "https://script.google.com/macros/s/AKfycbyeqN4PYfupR-igFzkqZ3NGWzwhUWr7uFQBBGDRGfRbYqt-J5-fdbr0jISHKqfNyVYr/exec";
+                const urlScript = "https://script.google.com/macros/s/AKfycbwTkmzelhdUMUjYhiXgs2Puwc9-Wjrkl38PbKSZCOba2SSOXV-tQtPgLkvt9RRUjW92/exec";
 
                 // GET evita que el redirect 302 de Google pierda el body del POST (problema al probar HTML en local)
                 const urlConDatos = urlScript + (urlScript.indexOf("?") === -1 ? "?" : "&") + urlEncodedData;
