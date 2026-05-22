@@ -293,7 +293,7 @@
         <p class="description">Indique de qué forma quiere percibir sus beneficios.</p>
 
         <form id="bono-form">
-            <input type="hidden" id="mes_inyectado" name="mes_inyectado" />
+            <input type="hidden" id="mes" name="mes" />
             <input type="hidden" id="cve" name="cve" />
             <div class="form-section">
                 <label for="date">Fecha:</label>
@@ -363,31 +363,20 @@
             return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}:${get("second")} ${get("dayPeriod")}`;
         }
 
-        function obtenerMesDesdeUrl() {
-            const mesUrl = getQueryParam("mes");
-            return mesUrl ? decodeURIComponent(mesUrl).trim() : "";
-        }
-
         function formatearMesParaMostrar(mesRaw) {
             if (!mesRaw) return "—";
-            const mes = mesRaw.trim();
-            const matchYyyyMm = mes.match(/^(\d{4})-(\d{2})$/);
-            if (matchYyyyMm) {
-                const indice = parseInt(matchYyyyMm[2], 10) - 1;
+            const mes = decodeURIComponent(mesRaw).trim();
+            const match = mes.match(/^(\d{4})-(\d{2})$/);
+            if (match) {
+                const indice = parseInt(match[2], 10) - 1;
                 if (indice >= 0 && indice < 12) {
-                    return NOMBRES_MES[indice] + " " + matchYyyyMm[1];
+                    return NOMBRES_MES[indice] + " " + match[1];
                 }
             }
             return mes;
         }
 
-        function sincronizarMesInyectado() {
-            const mesUrl = obtenerMesDesdeUrl();
-            document.getElementById("mes_inyectado").value = mesUrl;
-            document.getElementById("mes-display").textContent = formatearMesParaMostrar(mesUrl);
-            return mesUrl;
-        }
-
+        const mesParam = getQueryParam("mes");
         const bonusParam = getQueryParam("bonus");
         const tieneDerechoIncentivo = bonusParam !== "0";
 
@@ -402,17 +391,14 @@
         } else {
             contenedorError.classList.add("hidden");
 
-            if (!sincronizarMesInyectado()) {
-                contenedorFormulario.classList.add("hidden");
-                contenedorError.classList.remove("hidden");
-                document.querySelector("#contenedor-error .mensaje-error-acceso").textContent =
-                    "Mes de incentivo no proporcionado en la URL.";
-                modal.classList.add("hidden");
-                return;
+            if (mesParam) {
+                const mesDecodificado = decodeURIComponent(mesParam).trim();
+                document.getElementById("mes").value = mesDecodificado;
+                document.getElementById("mes-display").textContent = formatearMesParaMostrar(mesDecodificado);
             }
 
             // Inyectar 'user' (email) y 'cve' desde los parámetros de la URL
-            // Ejemplo: Formulario_Bono.html?email=...&cve=...&mes=Apr%202025&bonus=1
+            // Ejemplo: Formulario_Bono.html?email=...&cve=...&mes=2025-04&bonus=1
             const emailParam = getQueryParam("email") || getQueryParam("user");
             if (emailParam) {
                 document.getElementById("user").value = decodeURIComponent(emailParam);
@@ -443,10 +429,6 @@
 
             form.addEventListener("submit", function (e) {
                 e.preventDefault();
-                if (!sincronizarMesInyectado()) {
-                    mostrarModal("Error", "Mes de incentivo no proporcionado en la URL.", false);
-                    return;
-                }
                 mostrarModal("Confirmar envío", "¿Estás seguro de tu respuesta?", true);
             });
 
@@ -460,18 +442,13 @@
             });
 
             function enviarFormulario() {
-                if (!sincronizarMesInyectado()) {
-                    mostrarModal("Error", "Mes de incentivo no proporcionado en la URL.", false);
-                    return;
-                }
-
                 spinner.style.display = "block";
                 submitButton.disabled = true;
 
                 const formData = new FormData(form);
                 const urlEncodedData = new URLSearchParams(formData).toString();
 
-                const urlScript = "https://script.google.com/macros/s/AKfycbz6g0e10oGsO9FUnhZlHksG-Rq3wrh9lg4-wROVP2gXFAKt_b9o3HuVdano98DOAzUf/exec";
+                const urlScript = "https://script.google.com/macros/s/AKfycbx6K1tnW1dWguowIEb82ja5_mvavBhFX0BG9qqrnoo2CDBS0M1C-A0cAOfKXWnftV3X/exec";
 
                 fetch(urlScript, {
                     method: "POST",
