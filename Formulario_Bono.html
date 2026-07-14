@@ -591,7 +591,7 @@
                 const urlEncodedData = new URLSearchParams(formData).toString();
 
                 // URL de tu implementación Web App (termina en /exec)
-                const urlScript = "https://script.google.com/macros/s/AKfycbwuXycz8Xv-H4a0CiVKNK8_rEfmFhEOHpMjnLhnNXfCaxbRvRKUqNR7O_M_sbN_LbP2/exec";
+                const urlScript = "https://script.google.com/macros/s/AKfycbzjkCK9qvZAqmXZ-N9d2EqNCXtvS3X5-VItJdqhoeq0b6LHt3E327Kc66ZhnHS-Mice/exec";
 
                 // GET evita que el redirect 302 de Google pierda el body del POST (problema al probar HTML en local)
                 const urlConDatos = urlScript + (urlScript.indexOf("?") === -1 ? "?" : "&") + urlEncodedData;
