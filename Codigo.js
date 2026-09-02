@@ -1,8 +1,6 @@
 /*const VERSION_APP = "2026-07-13_19-55";*/
 
 function doGet(e) {
-  /*console.log("VERSION APP:", VERSION_APP);*/
-
   return procesarRegistro(obtenerDatosRequest(e));
 }
 
@@ -53,7 +51,8 @@ function procesarRegistro(data) {
     cve: data.cve || "",
     mes: data.mes || "",
     bonus_type: data.bonus_type || "",
-    staff: data.staff || ""
+    staff: data.staff || "",
+    program: data.program || ""
   }));
 
   if (!data.user) {
@@ -72,6 +71,14 @@ function procesarRegistro(data) {
   }
   if (!calendar[mes]) {
     return respuestaTexto("ERROR: No existe calendarización para el mes " + mes);
+  }
+
+  const isAdmin = userEmail.includes(params.dominio_admin);
+
+  // Regla de autorización: si el mes no está marcado como auth=true en Calendarización,
+  // solo los usuarios admin pueden responder.
+  if (!isAdmin && !calendar[mes].auth) {
+    return respuestaTexto("ERROR: El mes " + mes + " no está autorizado para recibir respuestas. Favor de intentar más tarde.");
   }
 
   const now = new Date();
@@ -93,16 +100,19 @@ function procesarRegistro(data) {
 
     const rows = sheet.getDataRange().getValues();
     for (let i = 1; i < rows.length; i++) {
-      const rowCve = rows[i][2];
-      const rowMonth = normalizarMesFila(rows[i][4]);
+      // Layout: program(0), date(1), user(2), cve(3), bonus_type(4), mes(5)
+      const rowProgram = rows[i][0];
+      const rowCve = rows[i][3];
+      const rowMonth = normalizarMesFila(rows[i][5]);
 
-      if (rowCve == data.cve && rowMonth === mes) {
+      if (rowCve == data.cve && rowMonth === mes && rowProgram == data.program) {
         return respuestaTexto("ERROR: Solo se puede responder una vez por clave matriz.");
       }
     }
   }
 
   sheet.appendRow([
+    data.program || "",
     now,
     userEmail,
     data.cve,
@@ -184,6 +194,9 @@ function cargarParametros(ss) {
   return params;
 }
 
+/**
+ * Lee la hoja "Calendarizacion" con layout: mes, auth, fecha_ini, fecha_cierre.
+ */
 function cargarCalendarizacion(ss) {
   const hoja = ss.getSheetByName("Calendarizacion");
   const datos = hoja.getDataRange().getValues();
@@ -200,10 +213,21 @@ function cargarCalendarizacion(ss) {
     );
 
     calendar[mes] = {
-      fecha_ini: fila[1],
-      fecha_cierre: fila[2]
+      auth: esVerdadero(fila[1]),
+      fecha_ini: fila[2],
+      fecha_cierre: fila[3]
     };
   }
 
   return calendar;
+}
+
+/**
+ * Interpreta el valor de la columna auth como booleano.
+ * Acepta checkbox real (true/false) o texto ("TRUE", "Verdadero", "1", "Si").
+ */
+function esVerdadero(valor) {
+  if (typeof valor === "boolean") return valor;
+  const texto = String(valor || "").trim().toLowerCase();
+  return texto === "true" || texto === "verdadero" || texto === "1" || texto === "si" || texto === "sí";
 }
